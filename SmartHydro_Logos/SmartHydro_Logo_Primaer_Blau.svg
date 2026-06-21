@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 175" width="560" height="175">
+  <defs>
+    <linearGradient id="drop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3DA5E8"/>
+      <stop offset="55%" stop-color="#1E6FC4"/>
+      <stop offset="100%" stop-color="#134B96"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#A9DBF7"/>
+      <stop offset="100%" stop-color="#6FC0F2"/>
+    </linearGradient>
+    <clipPath id="dropClip">
+      <path d="M70 28 C70 28 116 78 116 112 A46 46 0 1 1 24 112 C24 78 70 28 70 28 Z"/>
+    </clipPath>
+  </defs>
+  <g>
+    <path d="M70 28 C70 28 116 78 116 112 A46 46 0 1 1 24 112 C24 78 70 28 70 28 Z" fill="url(#drop)"/>
+    <g clip-path="url(#dropClip)">
+      <path d="M14 120 C34 104 54 136 74 120 C94 104 114 136 134 120 L134 170 L14 170 Z" fill="url(#wave)" opacity="0.92"/>
+      <path d="M14 134 C34 118 54 150 74 134 C94 118 114 150 134 134 L134 170 L14 170 Z" fill="#ffffff" opacity="0.85"/>
+    </g>
+    <ellipse cx="54" cy="74" rx="9" ry="14" fill="#ffffff" opacity="0.30" transform="rotate(-20 54 74)"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="150" y="104" font-size="56" letter-spacing="-1">
+      <tspan fill="#1E6FC4" font-weight="400">Smart</tspan><tspan fill="#134B96" font-weight="700">Hydro</tspan>
+    </text>
+    <text x="153" y="134" font-size="15.5" letter-spacing="4.2" fill="#5A93C9" font-weight="400">TRINKE · TRACKE · LEBE GESUND</text>
+  </g>
+</svg>
