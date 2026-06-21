@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartHydro</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 16px;
+    }
+
+    .phone {
+      width: 100%;
+      max-width: 390px;
+      padding-bottom: 90px;
+    }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; max-width: 390px;
+      background: #1e293bee;
+      backdrop-filter: blur(16px);
+      border-top: 1px solid #334155;
+      display: flex;
+      z-index: 800;
+      padding: 10px 0 18px;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      background: none; border: none; cursor: pointer;
+      color: #475569; transition: color 0.15s;
+      font-size: 11px; font-weight: 600;
+      padding: 4px 0;
+    }
+    .nav-item svg { display: block; transition: transform 0.15s; }
+    .nav-item.active { color: #38bdf8; }
+    .nav-item.active svg { transform: scale(1.1); }
+
+    /* Tab sections */
+    .tab-section { display: none; }
+    .tab-section.active { display: block; }
+
+    /* Verlauf sub-tabs */
+    .sub-tabs {
+      display: flex; gap: 8px; margin-bottom: 20px;
+    }
+    .sub-tab {
+      flex: 1; padding: 9px 0; border-radius: 12px;
+      border: 1px solid #334155; background: #1e293b;
+      color: #64748b; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .sub-tab.active {
+      background: #0ea5e9; border-color: #0ea5e9; color: #0f172a;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .header .greeting { font-size: 13px; color: #94a3b8; }
+    .header .name { font-size: 20px; font-weight: 700; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+      cursor: pointer; position: relative;
+      border: none; color: #0f172a;
+      transition: opacity 0.15s;
+    }
+    .avatar:hover { opacity: 0.85; }
+
+    /* Settings Dropdown */
+    .settings-wrap { position: relative; }
+    .settings-drop {
+      position: absolute; top: 54px; right: 0;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 8px;
+      min-width: 220px;
+      box-shadow: 0 12px 40px #00000066;
+      z-index: 500;
+      opacity: 0; pointer-events: none;
+      transform: translateY(-8px) scale(0.96);
+      transition: all 0.2s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    .settings-drop.open { opacity: 1; pointer-events: all; transform: none; }
+    .settings-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      transition: background 0.15s; cursor: default;
+    }
+    .settings-row:hover { background: #0f172a; }
+    .settings-row .s-icon { font-size: 18px; }
+    .settings-row .s-label { flex: 1; }
+    .s-toggle {
+      width: 40px; height: 22px;
+      background: #16a34a;
+      border-radius: 99px; position: relative;
+      cursor: pointer; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .s-toggle::after {
+      content: ''; position: absolute;
+      width: 16px; height: 16px;
+      background: white; border-radius: 50%;
+      top: 3px; left: 21px;
+      transition: left 0.2s;
+    }
+    .s-toggle.off { background: #334155; }
+    .s-toggle.off::after { left: 3px; }
+    .settings-divider { height: 1px; background: #334155; margin: 4px 6px; }
+
+    /* Progress Ring */
+    .ring-card {
+      background: linear-gradient(135deg, #1e3a5f, #0f2744);
+      border-radius: 24px;
+      padding: 32px;
+      text-align: center;
+      margin-bottom: 20px;
+      border: 1px solid #1e40af33;
+    }
+    .ring-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-bg { fill: none; stroke: #1e3a5f; stroke-width: 10; }
+    .ring-fill {
+      fill: none;
+      stroke: url(#grad);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 565;
+      stroke-dashoffset: 169; /* 70% filled: 565*(1-0.70)=169 */
+      transition: stroke-dashoffset 1.2s ease;
+    }
+    .ring-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .ring-ml { font-size: 28px; font-weight: 800; color: #38bdf8; }
+    .ring-total { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .ring-percent { font-size: 13px; color: #38bdf8; font-weight: 600; }
+
+    .ring-meta {
+      display: flex;
+      justify-content: space-around;
+    }
+    .ring-meta-item { text-align: center; }
+    .ring-meta-item .val { font-size: 17px; font-weight: 700; color: #f1f5f9; }
+    .ring-meta-item .lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    /* Quick Add */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .quick-add {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .quick-add button {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      color: #f1f5f9;
+      padding: 14px 6px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .quick-add button .icon {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      height: 52px;
+    }
+    .quick-add button svg { display: block; }
+    .quick-add button:hover { background: #0ea5e9; border-color: #0ea5e9; transform: translateY(-2px); }
+    .quick-add button.active { background: #0ea5e9; border-color: #0ea5e9; }
+
+    /* Custom amount */
+    .custom-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .custom-row input {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      color: #f1f5f9;
+      padding: 13px 16px;
+      font-size: 15px;
+      outline: none;
+    }
+    .custom-row input::placeholder { color: #475569; }
+    .custom-row input:focus { border-color: #0ea5e9; }
+    .custom-row button {
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      border: none;
+      border-radius: 14px;
+      color: #0f172a;
+      padding: 13px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .custom-row button:hover { opacity: 0.85; }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      flex: 1;
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid #334155;
+      text-align: center;
+      cursor: default;
+    }
+    .stat-card.clickable { cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+    .stat-card.clickable:hover { border-color: #0ea5e9; transform: translateY(-2px); }
+
+    /* History Popup */
+    .history-popup {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 28px;
+      padding: 28px 24px 24px;
+      max-width: 340px;
+      width: 92%;
+      transform: scale(0.88) translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .overlay.show .history-popup { transform: scale(1) translateY(0); }
+    .history-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .history-sub { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .chart-area {
+      position: relative;
+      height: 150px;
+      margin-bottom: 10px;
+    }
+    .chart-wrap {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 6px;
+      height: 100%;
+    }
+    .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
+    .chart-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+    .chart-bar {
+      width: 100%;
+      border-radius: 6px 6px 3px 3px;
+      min-height: 4px;
+      transition: height 0.7s cubic-bezier(0.34,1.2,0.64,1);
+    }
+    .chart-bar.today { background: linear-gradient(180deg, #38bdf8, #0ea5e9); }
+    .chart-bar.past { background: #2d4a6b; }
+    .chart-bar.reached { background: linear-gradient(180deg, #4ade80, #16a34a); }
+    .chart-day { font-size: 11px; color: #64748b; margin-top: 6px; flex-shrink: 0; }
+    .goal-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: #4ade8066;
+      border-top: 1.5px dashed #4ade8077;
+      pointer-events: none;
+    }
+    .chart-col { position: relative; }
+    .chart-tooltip {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%; transform: translateX(-50%);
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #38bdf8;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 8px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 10;
+    }
+    .chart-col:hover .chart-tooltip { opacity: 1; }
+    .goal-line-label {
+      position: absolute;
+      right: 0;
+      background: #14532d;
+      color: #4ade80;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transform: translateY(-50%);
+      white-space: nowrap;
+    }
+    .history-avg {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #0f172a; border-radius: 14px; padding: 14px 16px;
+      margin-top: 16px;
+    }
+    .history-avg .avg-lbl { font-size: 13px; color: #64748b; }
+    .history-avg .avg-val { font-size: 20px; font-weight: 800; color: #38bdf8; }
+    .history-close {
+      width: 100%; margin-top: 14px;
+      background: #334155; border: none; border-radius: 14px;
+      color: #f1f5f9; font-size: 14px; font-weight: 600;
+      padding: 13px; cursor: pointer; transition: background 0.15s;
+    }
+    .history-close:hover { background: #475569; }
+    .stat-card .stat-icon { font-size: 22px; margin-bottom: 6px; }
+    .stat-card .stat-val { font-size: 18px; font-weight: 700; color: #38bdf8; }
+    .stat-card .stat-lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+    /* Log */
+    .log-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .log-item {
+      background: #1e293b;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid #334155;
+      animation: fadein 0.3s ease;
+    }
+    @keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .log-dot {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: #0f172a;
+      border: 1px solid #1e40af44;
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 6px;
+      flex-shrink: 0;
+    }
+    .log-info { flex: 1; }
+    .log-info .log-amount { font-size: 15px; font-weight: 700; }
+    .log-info .log-time { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .log-del {
+      background: none; border: none; color: #475569;
+      font-size: 16px; cursor: pointer; padding: 4px;
+      transition: color 0.15s;
+    }
+    .log-del:hover { color: #ef4444; }
+
+    /* Reminder */
+    .reminder-card {
+      background: linear-gradient(135deg, #0c2d4a, #0e3a5e);
+      border: 1px solid #0ea5e955;
+      border-radius: 22px;
+      padding: 22px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .reminder-icon { font-size: 32px; }
+    .reminder-text .title { font-size: 16px; font-weight: 700; color: #7dd3fc; }
+    .reminder-text .sub { font-size: 28px; font-weight: 800; color: #38bdf8; margin-top: 4px; letter-spacing: -0.5px; }
+    .reminder-toggle {
+      margin-left: auto;
+      width: 44px; height: 24px;
+      background: #16a34a;
+      border-radius: 99px;
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .reminder-toggle::after {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      background: white; border-radius: 50%;
+      top: 3px; left: 23px;
+      transition: left 0.2s;
+    }
+    .reminder-toggle.off { background: #334155; }
+    .reminder-toggle.off::after { left: 3px; }
+
+    /* Streak */
+    .streak-card {
+      background: linear-gradient(135deg, #451a0322, #92400e22);
+      border: 1px solid #d9770655;
+      border-radius: 18px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .streak-icon { font-size: 28px; }
+    .streak-text .title { font-size: 14px; font-weight: 700; color: #fb923c; }
+    .streak-text .sub { font-size: 12px; color: #64748b; margin-top: 3px; }
+    .streak-val { margin-left: auto; font-size: 28px; font-weight: 800; color: #fb923c; }
+
+    /* Onboarding */
+    .onboarding {
+      position: fixed; inset: 0;
+      background: #0f172a;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2000;
+      padding: 24px;
+      transition: opacity 0.4s ease;
+    }
+    .onboarding.hidden { opacity: 0; pointer-events: none; }
+    .onboarding-card {
+      background: linear-gradient(135deg, #1e293b, #0f2744);
+      border: 1px solid #1e40af33;
+      border-radius: 32px;
+      padding: 40px 28px 32px;
+      max-width: 340px; width: 100%;
+      text-align: center;
+    }
+    .onboarding-logo { font-size: 52px; margin-bottom: 16px; }
+    .onboarding-card h1 { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+    .onboarding-card h1 span { color: #38bdf8; }
+    .onboarding-card .ob-sub { font-size: 14px; color: #64748b; margin-bottom: 32px; line-height: 1.5; }
+    .ob-label { font-size: 13px; font-weight: 600; color: #94a3b8; text-align: left; margin-bottom: 8px; }
+    .ob-presets { display: flex; gap: 8px; margin-bottom: 12px; }
+    .ob-preset {
+      flex: 1; padding: 10px 4px; border-radius: 12px;
+      border: 1px solid #334155; background: #0f172a;
+      color: #94a3b8; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .ob-preset:hover, .ob-preset.sel {
+      border-color: #0ea5e9; color: #38bdf8; background: #0ea5e911;
+    }
+    .ob-custom-row { display: flex; gap: 8px; margin-bottom: 28px; }
+    .ob-custom-row input {
+      flex: 1; background: #0f172a; border: 1px solid #334155;
+      border-radius: 12px; color: #f1f5f9; padding: 12px 14px;
+      font-size: 15px; outline: none; transition: border-color 0.15s;
+    }
+    .ob-custom-row input:focus { border-color: #0ea5e9; }
+    .ob-custom-row input::placeholder { color: #475569; }
+    .ob-start {
+      width: 100%;
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      border: none; border-radius: 16px; color: #0f172a;
+      padding: 16px; font-size: 16px; font-weight: 800;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .ob-start:hover { opacity: 0.88; }
+
+    /* Popup Overlay */
+    .overlay {
+      position: fixed; inset: 0;
+      background: #0f172acc;
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .overlay.show { opacity: 1; pointer-events: all; }
+
+    .popup {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 28px;
+      padding: 32px 28px 24px;
+      max-width: 320px;
+      width: 90%;
+      text-align: center;
+      transform: scale(0.88) translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .overlay.show .popup { transform: scale(1) translateY(0); }
+
+    .popup-bell {
+      font-size: 48px;
+      margin-bottom: 12px;
+      animation: ring 0.6s ease 0.3s;
+    }
+    @keyframes ring {
+      0%,100% { transform: rotate(0); }
+      20% { transform: rotate(-18deg); }
+      40% { transform: rotate(18deg); }
+      60% { transform: rotate(-10deg); }
+      80% { transform: rotate(10deg); }
+    }
+    .popup h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+    .popup .popup-sub {
+      font-size: 14px; color: #94a3b8; margin-bottom: 8px; line-height: 1.5;
+    }
+    .popup .popup-progress {
+      background: #0f172a;
+      border-radius: 99px;
+      height: 8px;
+      margin: 16px 0 20px;
+      overflow: hidden;
+    }
+    .popup .popup-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+    .popup .popup-stat {
+      font-size: 13px; color: #64748b; margin-bottom: 22px;
+    }
+    .popup .popup-stat span { color: #38bdf8; font-weight: 700; }
+
+    .popup-btns { display: flex; flex-direction: column; gap: 10px; }
+    .popup-btns button {
+      border: none; border-radius: 14px;
+      padding: 14px; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .popup-btns button:hover { opacity: 0.85; }
+    .btn-yes {
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      color: #0f172a;
+    }
+    .btn-no {
+      background: #334155;
+      color: #f1f5f9;
+    }
+    .btn-snooze {
+      background: none;
+      color: #64748b;
+      font-size: 13px !important;
+      padding: 8px !important;
+    }
+
+    /* Floating Timer */
+    .float-timer {
+      position: fixed;
+      bottom: 24px; right: 20px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px #00000055;
+      z-index: 900;
+      opacity: 0;
+      transform: translateY(16px) scale(0.92);
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    .float-timer.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: all;
+    }
+    .float-timer .ft-icon { font-size: 18px; }
+    .float-timer .ft-time {
+      font-size: 15px; font-weight: 700; color: #38bdf8;
+      font-variant-numeric: tabular-nums;
+      min-width: 36px;
+    }
+    .float-timer .ft-done {
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      border: none; border-radius: 10px;
+      color: #0f172a; font-size: 11px; font-weight: 700;
+      padding: 5px 10px; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .float-timer .ft-done:hover { opacity: 0.85; }
+    .float-timer .ft-close {
+      background: none; border: none; color: #475569;
+      font-size: 13px; cursor: pointer; padding: 2px 0 2px 2px;
+      line-height: 1;
+    }
+    .float-timer .ft-close:hover { color: #94a3b8; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #0ea5e9;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 22px;
+      border-radius: 99px;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Onboarding -->
+<div class="onboarding" id="onboarding">
+  <div class="onboarding-card">
+    <div class="onboarding-logo">💧</div>
+    <h1>Smart<span>Hydro</span></h1>
+    <p class="ob-sub">Dein smarter Trink-Begleiter.<br>Wie viel Wasser möchtest du täglich trinken?</p>
+    <div class="ob-label">Empfehlungen</div>
+    <div class="ob-presets">
+      <button class="ob-preset" onclick="selectPreset(1500, this)">1,5 l</button>
+      <button class="ob-preset sel" onclick="selectPreset(2000, this)">2,0 l</button>
+      <button class="ob-preset" onclick="selectPreset(2500, this)">2,5 l</button>
+      <button class="ob-preset" onclick="selectPreset(3000, this)">3,0 l</button>
+    </div>
+    <div class="ob-label" style="margin-top:4px;">Oder eigenes Ziel</div>
+    <div class="ob-custom-row">
+      <input type="number" id="obCustom" placeholder="z.B. 2200" min="500" max="5000" oninput="deselectPresets()"/>
+      <span style="display:flex;align-items:center;color:#64748b;font-size:14px;font-weight:600;">ml</span>
+    </div>
+    <button class="ob-start" onclick="startApp()">Los geht's 🚀</button>
+  </div>
+</div>
+
+<div class="phone">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="greeting" id="greeting">Guten Morgen,</div>
+      <div class="name">Felix 👋</div>
+    </div>
+    <div class="settings-wrap">
+      <button class="avatar" onclick="toggleSettings(event)">F</button>
+      <div class="settings-drop" id="settingsDrop">
+        <div class="settings-row">
+          <span class="s-icon">🔔</span>
+          <span class="s-label">Erinnerungen</span>
+          <div class="s-toggle" id="sToggle" onclick="toggleReminder()"></div>
+        </div>
+        <div class="settings-row" onclick="openGoalEditor()" style="cursor:pointer;">
+          <span class="s-icon">🎯</span>
+          <span class="s-label">Tagesziel anpassen</span>
+          <span style="font-size:12px;font-weight:700;color:#38bdf8;" id="currentGoalLabel"></span>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-row" style="color:#64748b;font-size:13px;font-weight:400;cursor:default;">
+          <span class="s-icon">👤</span>
+          <span class="s-label">Felix · SmartHydro</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ring Progress -->
+  <div class="ring-card">
+    <div class="ring-wrap">
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#0ea5e9"/>
+            <stop offset="100%" style="stop-color:#38bdf8"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="90" cy="90" r="80"/>
+        <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="80"/>
+      </svg>
+      <div class="ring-label">
+        <div class="ring-ml" id="displayMl">1750</div>
+        <div class="ring-total">von 2500 ml</div>
+        <div class="ring-percent" id="displayPct">70%</div>
+      </div>
+    </div>
+    <div class="ring-meta">
+      <div class="ring-meta-item">
+        <div class="val" id="metaGlasses">7</div>
+        <div class="lbl">Gläser</div>
+      </div>
+      <div class="ring-meta-item">
+        <div class="val" id="metaRemain">750 ml</div>
+        <div class="lbl">noch offen</div>
+      </div>
+      <div class="ring-meta-item">
+        <div class="val">11:42</div>
+        <div class="lbl">letzte Erinnerung</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: HOME -->
+  <div class="tab-section active" id="tab-home">
+
+  <!-- Quick Add -->
+  <div class="section-title">Schnell hinzufügen</div>
+  <div class="quick-add">
+    <button onclick="addWater(100)">
+      <span class="icon">
+        <!-- Small shot glass -->
+        <svg width="32" height="32" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 5h10l-2 14H11L9 5z" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/>
+          <path d="M11.4 13h5.2" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/>
+          <rect x="10" y="19" width="8" height="2" rx="1" fill="#38bdf8" opacity=".5"/>
+          <path d="M11.2 10c1.2 1 4.4 1 5.6 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/>
+          <path d="M10.2 8c2 1.5 5.6 1.5 7.6 0" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round" fill="none" opacity=".25"/>
+        </svg>
+      </span>100 ml
+    </button>
+    <button onclick="addWater(250)">
+      <span class="icon">
+        <!-- Drinking glass -->
+        <svg width="38" height="38" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 4h12l-2.5 18H10.5L8 4z" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/>
+          <path d="M10.8 15h6.4" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/>
+          <path d="M10.2 12c1.6 1.2 6 1.2 7.6 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/>
+          <path d="M9.6 9c2.2 1.8 8.6 1.8 10.8 0" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round" fill="none" opacity=".25"/>
+          <rect x="9.5" y="22" width="9" height="2" rx="1" fill="#38bdf8" opacity=".5"/>
+        </svg>
+      </span>250 ml
+    </button>
+    <button onclick="addWater(330)">
+      <span class="icon">
+        <!-- Slim water bottle -->
+        <svg width="44" height="44" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="11" y="2" width="6" height="3" rx="1" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+          <path d="M11 5c-2 1-3 2.5-3 4v12a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V9c0-1.5-1-3-3-4" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/>
+          <path d="M9 16h10" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/>
+          <path d="M9.5 13c1.8 1 7.2 1 9 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/>
+          <path d="M9.5 10.5c1.8 1 7.2 1 9 0" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round" fill="none" opacity=".25"/>
+        </svg>
+      </span>330 ml
+    </button>
+    <button onclick="addWater(500)">
+      <span class="icon">
+        <!-- Large bottle -->
+        <svg width="50" height="50" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10.5" y="2" width="7" height="2.5" rx="1" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+          <path d="M10.5 4.5c-2.5 1.2-3.5 3-3.5 5v13a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-13c0-2-1-3.8-3.5-5" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/>
+          <path d="M8 17h12" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/>
+          <path d="M8 14h12" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round" opacity=".2"/>
+          <path d="M8.5 11c2 1.2 9 1.2 11 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/>
+          <path d="M8.5 8.5c2 1.2 9 1.2 11 0" stroke="#7dd3fc" stroke-width="1" stroke-linecap="round" fill="none" opacity=".25"/>
+        </svg>
+      </span>500 ml
+    </button>
+  </div>
+
+  <!-- Custom -->
+  <div class="custom-row">
+    <input type="number" id="customInput" placeholder="Eigene Menge (ml)" min="1" max="2000"/>
+    <button onclick="addCustom()">+ Hinzufügen</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="section-title">Heute im Überblick</div>
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-val" id="statStreak">5</div>
+      <div class="stat-lbl">Tage Streak</div>
+    </div>
+    <div class="stat-card clickable" onclick="switchTab('verlauf')">
+      <div class="stat-icon">⏱️</div>
+      <div class="stat-val" id="avgVal">1,8 l</div>
+      <div class="stat-lbl">Ø pro Tag</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-val">3×</div>
+      <div class="stat-lbl">Ziel erreicht</div>
+    </div>
+  </div>
+
+  <!-- Manual Trigger -->
+  <button onclick="showPopup()" style="
+    width:100%; margin-bottom:20px;
+    background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+    border:none; border-radius:16px; color:#0f172a;
+    padding:16px; font-size:15px; font-weight:700;
+    cursor:pointer; display:flex; align-items:center;
+    justify-content:center; gap:10px; transition:opacity 0.15s;
+  " onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+    🔔 Erinnerung jetzt auslösen
+  </button>
+
+  <!-- Reminder -->
+  <div class="section-title">Erinnerungen</div>
+  <div class="reminder-card">
+    <div class="reminder-icon">🔔</div>
+    <div class="reminder-text">
+      <div class="title" id="reminderTitle">Nächste Erinnerung in:</div>
+      <div class="sub" id="reminderCountdown">2:00:00</div>
+    </div>
+  </div>
+
+  <!-- Streak -->
+  <div class="streak-card">
+    <div class="streak-icon">🔥</div>
+    <div class="streak-text">
+      <div class="title">Aktueller Streak</div>
+      <div class="sub">Du erreichst dein Ziel seit 5 Tagen in Folge!</div>
+    </div>
+    <div class="streak-val">5</div>
+  </div>
+
+  </div><!-- end tab-home -->
+
+  <!-- TAB: PROTOKOLL -->
+  <div class="tab-section" id="tab-protokoll">
+    <div class="section-title">Protokoll heute</div>
+    <div id="emptyLog" style="text-align:center;padding:40px 0;color:#475569;">
+      <div style="font-size:40px;margin-bottom:12px;">💧</div>
+      <div style="font-size:14px;font-weight:600;">Noch nichts eingetragen</div>
+      <div style="font-size:12px;margin-top:4px;">Füge deine erste Menge hinzu!</div>
+    </div>
+    <div class="log-list" id="logList"></div>
+  </div>
+
+  <!-- TAB: VERLAUF -->
+  <div class="tab-section" id="tab-verlauf">
+    <div class="section-title">Verlauf</div>
+    <div class="sub-tabs">
+      <button class="sub-tab active" onclick="switchPeriod('woche', this)">7 Tage</button>
+      <button class="sub-tab" onclick="switchPeriod('monat', this)">Letzter Monat</button>
+      <button class="sub-tab" onclick="switchPeriod('jahr', this)">Letztes Jahr</button>
+    </div>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:22px;padding:20px;">
+      <div class="chart-area" style="height:180px;">
+        <div class="chart-wrap" id="verlaufChart"></div>
+        <div class="goal-line" id="verlaufGoalLine"><span class="goal-line-label">Ziel 2,5 l</span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 2px 0;" id="verlaufDays"></div>
+    </div>
+    <div class="history-avg" style="margin-top:14px;">
+      <span class="avg-lbl">Ø pro Tag</span>
+      <span class="avg-val" id="verlaufAvg">—</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-item" id="nav-protokoll" onclick="switchTab('protokoll')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+    Protokoll
+  </button>
+  <button class="nav-item active" id="nav-home" onclick="switchTab('home')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><polyline points="9 21 9 12 15 12 15 21"/>
+    </svg>
+    Home
+  </button>
+  <button class="nav-item" id="nav-verlauf" onclick="switchTab('verlauf')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    Verlauf
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- Floating Timer -->
+<div class="float-timer" id="floatTimer">
+  <span class="ft-icon">💧</span>
+  <span class="ft-time" id="ftTime">5:00</span>
+  <button class="ft-done" onclick="timerDone()">Getrunken!</button>
+  <button class="ft-close" onclick="timerCancel()">✕</button>
+</div>
+
+<!-- History Popup -->
+<div class="overlay" id="historyOverlay" onclick="if(event.target===this)closeHistory()">
+  <div class="history-popup">
+    <div class="history-title">Verlauf</div>
+    <div class="history-sub">Letzte 7 Tage · Ziel: 2.500 ml</div>
+    <div class="chart-area">
+      <div class="chart-wrap" id="chartWrap"></div>
+      <div class="goal-line" id="goalLine"><span class="goal-line-label">Ziel 2,5 l</span></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0 2px;" id="chartDays"></div>
+    <div class="history-avg">
+      <span class="avg-lbl">Ø pro Tag</span>
+      <span class="avg-val" id="historyAvg">—</span>
+    </div>
+    <button class="history-close" onclick="closeHistory()">Schließen</button>
+  </div>
+</div>
+
+<!-- Reminder Popup -->
+<div class="overlay" id="overlay">
+  <div class="popup">
+    <div class="popup-bell">🔔</div>
+    <h2>Zeit zu trinken!</h2>
+    <p class="popup-sub">Hast du in der letzten Stunde genug getrunken?</p>
+    <div class="popup-progress">
+      <div class="popup-progress-fill" id="popupFill"></div>
+    </div>
+    <p class="popup-stat">Heute: <span id="popupMl"></span> von 2500 ml</p>
+    <div id="popupBtns" class="popup-btns">
+      <button class="btn-yes" onclick="popupYes()">Ja, hab ich! 💧</button>
+      <button class="btn-no" onclick="popupStartTimer()">Nein, jetzt gleich trinken</button>
+      <button class="btn-snooze" onclick="popupSnooze()">⏰ Später erinnern (10 Min)</button>
+    </div>
+
+    <div id="popupInput" style="display:none;">
+      <div style="font-size:32px;margin-bottom:10px;">💧</div>
+      <p style="font-size:17px;font-weight:700;margin-bottom:6px;">Wie viel hast du getrunken?</p>
+      <p style="font-size:13px;color:#64748b;margin-bottom:20px;">Wähle eine Menge oder gib sie selbst ein</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <button onclick="popupLog(100)" style="background:#1e293b;border:1px solid #334155;border-radius:16px;color:#f1f5f9;padding:14px 8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:90px;" onmouseover="this.style.borderColor='#0ea5e9'" onmouseout="this.style.borderColor='#334155'">
+          <svg width="32" height="32" viewBox="0 0 28 28" fill="none"><path d="M9 5h10l-2 14H11L9 5z" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/><path d="M11.4 13h5.2" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><rect x="10" y="19" width="8" height="2" rx="1" fill="#38bdf8" opacity=".5"/><path d="M11.2 10c1.2 1 4.4 1 5.6 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/></svg>
+          100 ml
+        </button>
+        <button onclick="popupLog(250)" style="background:#1e293b;border:1px solid #334155;border-radius:16px;color:#f1f5f9;padding:14px 8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:90px;" onmouseover="this.style.borderColor='#0ea5e9'" onmouseout="this.style.borderColor='#334155'">
+          <svg width="38" height="38" viewBox="0 0 28 28" fill="none"><path d="M8 4h12l-2.5 18H10.5L8 4z" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/><path d="M10.8 15h6.4" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><path d="M10.2 12c1.6 1.2 6 1.2 7.6 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/><rect x="9.5" y="22" width="9" height="2" rx="1" fill="#38bdf8" opacity=".5"/></svg>
+          250 ml
+        </button>
+        <button onclick="popupLog(330)" style="background:#1e293b;border:1px solid #334155;border-radius:16px;color:#f1f5f9;padding:14px 8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:90px;" onmouseover="this.style.borderColor='#0ea5e9'" onmouseout="this.style.borderColor='#334155'">
+          <svg width="44" height="44" viewBox="0 0 28 28" fill="none"><rect x="11" y="2" width="6" height="3" rx="1" stroke="#38bdf8" stroke-width="1.5" fill="none"/><path d="M11 5c-2 1-3 2.5-3 4v12a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V9c0-1.5-1-3-3-4" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/><path d="M9 16h10" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><path d="M9.5 13c1.8 1 7.2 1 9 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/></svg>
+          330 ml
+        </button>
+        <button onclick="popupLog(500)" style="background:#1e293b;border:1px solid #334155;border-radius:16px;color:#f1f5f9;padding:14px 8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:90px;" onmouseover="this.style.borderColor='#0ea5e9'" onmouseout="this.style.borderColor='#334155'">
+          <svg width="50" height="50" viewBox="0 0 28 28" fill="none"><rect x="10.5" y="2" width="7" height="2.5" rx="1" stroke="#38bdf8" stroke-width="1.5" fill="none"/><path d="M10.5 4.5c-2.5 1.2-3.5 3-3.5 5v13a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-13c0-2-1-3.8-3.5-5" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round" fill="none"/><path d="M8 17h12" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><path d="M8.5 11c2 1.2 9 1.2 11 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/></svg>
+          500 ml
+        </button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input id="popupCustom" type="number" placeholder="Eigene Menge (ml)" min="1" max="2000"
+          style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:14px;color:#f1f5f9;padding:13px 16px;font-size:14px;outline:none;transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='#0ea5e9'" onblur="this.style.borderColor='#334155'"
+          onkeydown="if(event.key==='Enter') popupLogCustom()" />
+        <button onclick="popupLogCustom()" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);border:none;border-radius:14px;color:#0f172a;padding:13px 18px;font-size:20px;font-weight:700;cursor:pointer;">+</button>
+      </div>
+      <button onclick="popupShowBtns()" style="background:none;border:none;color:#475569;font-size:13px;cursor:pointer;padding:6px;width:100%;">← Zurück</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let GOAL = parseInt(localStorage.getItem('sh_goal')) || 2500;
+
+  let obSelected = 2000;
+  function selectPreset(ml, btn) {
+    obSelected = ml;
+    document.querySelectorAll('.ob-preset').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    document.getElementById('obCustom').value = '';
+  }
+  function deselectPresets() {
+    obSelected = null;
+    document.querySelectorAll('.ob-preset').forEach(b => b.classList.remove('sel'));
+  }
+  function startApp() {
+    const custom = parseInt(document.getElementById('obCustom').value);
+    const goal = custom >= 500 ? custom : (obSelected || 2000);
+    GOAL = goal;
+    localStorage.setItem('sh_goal', goal);
+    const ob = document.getElementById('onboarding');
+    ob.classList.add('hidden');
+    setTimeout(() => ob.style.display = 'none', 400);
+    updateGoalDisplay();
+    updateCurrentGoalLabel();
+    updateUI();
+    scheduleReminder();
+    updateGreeting();
+  }
+  function updateGoalDisplay() {
+    document.querySelectorAll('.ring-total').forEach(el => {
+      el.textContent = 'von ' + GOAL.toLocaleString('de') + ' ml';
+    });
+    document.querySelector('.history-sub') && (document.querySelector('.history-sub').textContent = 'Letzte 7 Tage · Ziel: ' + (GOAL/1000).toFixed(1).replace('.',',') + ' l');
+    document.querySelectorAll('.goal-line-label').forEach(el => el.textContent = 'Ziel ' + (GOAL/1000).toFixed(1).replace('.',',') + ' l');
+  }
+
+  // Show onboarding only if no goal saved yet
+  if (localStorage.getItem('sh_goal')) {
+    document.getElementById('onboarding').style.display = 'none';
+  }
+
+  function saveState() {
+    localStorage.setItem('sh_date', new Date().toDateString());
+    localStorage.setItem('sh_total', total);
+    localStorage.setItem('sh_log', JSON.stringify(logEntries));
+  }
+
+  const _today = new Date().toDateString();
+  const _saved = localStorage.getItem('sh_date') === _today;
+  let total = _saved ? (parseInt(localStorage.getItem('sh_total')) || 0) : 0;
+  let logEntries = _saved ? (JSON.parse(localStorage.getItem('sh_log') || '[]')) : [];
+
+  function updateUI() {
+    const pct = Math.min(total / GOAL, 1);
+    const circumference = 2 * Math.PI * 80;
+    const offset = circumference * (1 - pct);
+    document.getElementById('ringFill').style.strokeDasharray = circumference;
+    document.getElementById('ringFill').style.strokeDashoffset = offset;
+    document.getElementById('displayMl').textContent = total.toLocaleString('de');
+    document.getElementById('displayPct').textContent = Math.round(pct * 100) + '%';
+    document.getElementById('metaGlasses').textContent = logEntries.length;
+    const remain = Math.max(GOAL - total, 0);
+    document.getElementById('metaRemain').textContent = remain > 0 ? remain + ' ml' : '✓ Ziel!';
+
+    const list = document.getElementById('logList');
+    list.innerHTML = '';
+    [...logEntries].reverse().forEach((e, i) => {
+      const el = document.createElement('div');
+      el.className = 'log-item';
+      el.innerHTML = `
+        <div class="log-dot">${logSvg(e.ml)}</div>
+        <div class="log-info">
+          <div class="log-amount">+${e.ml} ml</div>
+          <div class="log-time">${e.time} Uhr</div>
+        </div>
+        <button class="log-del" onclick="deleteEntry(${logEntries.length - 1 - i})">✕</button>
+      `;
+      list.appendChild(el);
+    });
+    updateEmptyLog();
+  }
+
+  function now() {
+    const d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function logSvg(ml) {
+    if (ml <= 150) return `<svg width="22" height="22" viewBox="0 0 28 28" fill="none"><path d="M9 5h10l-2 14H11L9 5z" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round"/><path d="M11.4 13h5.2" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><rect x="10" y="19" width="8" height="2" rx="1" fill="#38bdf8" opacity=".5"/><path d="M11.2 10c1.2 1 4.4 1 5.6 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" opacity=".6"/></svg>`;
+    if (ml <= 280) return `<svg width="26" height="26" viewBox="0 0 28 28" fill="none"><path d="M8 4h12l-2.5 18H10.5L8 4z" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round"/><path d="M10.8 15h6.4" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><path d="M10.2 12c1.6 1.2 6 1.2 7.6 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" opacity=".6"/><rect x="9.5" y="22" width="9" height="2" rx="1" fill="#38bdf8" opacity=".5"/></svg>`;
+    if (ml <= 400) return `<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="11" y="2" width="6" height="3" rx="1" stroke="#38bdf8" stroke-width="1.5"/><path d="M11 5c-2 1-3 2.5-3 4v12a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V9c0-1.5-1-3-3-4" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 16h10" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><path d="M9.5 13c1.8 1 7.2 1 9 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" opacity=".6"/></svg>`;
+    return `<svg width="30" height="30" viewBox="0 0 28 28" fill="none"><rect x="10.5" y="2" width="7" height="2.5" rx="1" stroke="#38bdf8" stroke-width="1.5"/><path d="M10.5 4.5c-2.5 1.2-3.5 3-3.5 5v13a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-13c0-2-1-3.8-3.5-5" stroke="#38bdf8" stroke-width="1.6" stroke-linejoin="round"/><path d="M8 17h12" stroke="#38bdf8" stroke-width="1.4" stroke-linecap="round" opacity=".4"/><path d="M8.5 11c2 1.2 9 1.2 11 0" stroke="#7dd3fc" stroke-width="1.1" stroke-linecap="round" opacity=".6"/></svg>`;
+  }
+
+  function addWater(ml) {
+    total += ml;
+    logEntries.push({ ml, time: now() });
+    updateUI(); saveState();
+    showToast(`+${ml} ml hinzugefügt 💧`);
+    scheduleReminder();
+  }
+
+  function addCustom() {
+    const val = parseInt(document.getElementById('customInput').value);
+    if (!val || val < 1) return;
+    total += val;
+    logEntries.push({ ml: val, time: now() });
+    document.getElementById('customInput').value = '';
+    updateUI(); saveState();
+    showToast(`+${val} ml hinzugefügt 💧`);
+    scheduleReminder();
+  }
+
+  function deleteEntry(idx) {
+    total -= logEntries[idx].ml;
+    logEntries.splice(idx, 1);
+    updateUI(); saveState();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  let reminderOn = true;
+  let reminderTimer = null;
+  let reminderEndTime = null;
+  let countdownInterval = null;
+
+  function updateCountdown() {
+    const title = document.getElementById('reminderTitle');
+    const cd = document.getElementById('reminderCountdown');
+    if (!reminderOn) {
+      title.textContent = 'Erinnerungen pausiert';
+      cd.textContent = '—';
+      return;
+    }
+    if (!reminderEndTime) { cd.textContent = '—'; return; }
+    const left = Math.max(0, Math.round((reminderEndTime - Date.now()) / 1000));
+    const h = Math.floor(left / 3600);
+    const m = Math.floor((left % 3600) / 60);
+    const s = left % 60;
+    title.textContent = 'Nächste Erinnerung in:';
+    cd.textContent = (h > 0 ? h + ':' : '') +
+      m.toString().padStart(h > 0 ? 2 : 1, '0') + ':' +
+      s.toString().padStart(2, '0');
+  }
+
+  function showPopup() {
+    const pct = Math.min(total / GOAL, 1);
+    document.getElementById('popupFill').style.width = (pct * 100) + '%';
+    document.getElementById('popupMl').textContent = total.toLocaleString('de') + ' ml';
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function closePopup() {
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  function popupYes() {
+    popupShowInput();
+  }
+
+  function popupShowInput() {
+    document.getElementById('popupBtns').style.display = 'none';
+    document.getElementById('popupInput').style.display = 'block';
+    document.getElementById('popupCustom').focus();
+  }
+
+  function popupShowBtns() {
+    document.getElementById('popupInput').style.display = 'none';
+    document.getElementById('popupBtns').style.display = 'flex';
+  }
+
+  function popupLog(ml) {
+    total += ml;
+    logEntries.push({ ml, time: now() });
+    updateUI(); saveState();
+    closePopup();
+    popupShowBtns();
+    showToast(`+${ml} ml hinzugefügt 💧`);
+    scheduleReminder();
+  }
+
+  function popupLogCustom() {
+    const val = parseInt(document.getElementById('popupCustom').value);
+    if (!val || val < 1) return;
+    total += val;
+    logEntries.push({ ml: val, time: now() });
+    document.getElementById('popupCustom').value = '';
+    updateUI(); saveState();
+    closePopup();
+    popupShowBtns();
+    showToast(`+${val} ml hinzugefügt 💧`);
+    scheduleReminder();
+  }
+
+  let timerInterval = null;
+  let timerSeconds = 0;
+
+  function popupStartTimer() {
+    closePopup();
+    popupShowBtns();
+    startFloatTimer(5 * 60);
+  }
+
+  function startFloatTimer(seconds) {
+    if (timerInterval) clearInterval(timerInterval);
+    timerSeconds = seconds;
+    const el = document.getElementById('floatTimer');
+    el.classList.add('show');
+    renderTimer();
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      renderTimer();
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        el.classList.remove('show');
+        setTimeout(showPopup, 300);
+      }
+    }, 1000);
+  }
+
+  function renderTimer() {
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    document.getElementById('ftTime').textContent =
+      m + ':' + s.toString().padStart(2, '0');
+  }
+
+  function timerDone() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    document.getElementById('floatTimer').classList.remove('show');
+    setTimeout(() => {
+      showPopup();
+      popupShowInput();
+    }, 300);
+  }
+
+  function timerCancel() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    document.getElementById('floatTimer').classList.remove('show');
+    scheduleReminder();
+  }
+
+  function popupSnooze() {
+    closePopup();
+    showToast('Erinnerung in 10 Minuten ⏰');
+    if (reminderTimer) clearTimeout(reminderTimer);
+    reminderTimer = setTimeout(showPopup, 10 * 60 * 1000);
+  }
+
+  function scheduleReminder() {
+    if (reminderTimer) clearTimeout(reminderTimer);
+    if (countdownInterval) clearInterval(countdownInterval);
+    if (!reminderOn) { updateCountdown(); return; }
+    reminderEndTime = Date.now() + 2 * 60 * 60 * 1000;
+    reminderTimer = setTimeout(() => { reminderEndTime = null; showPopup(); }, 2 * 60 * 60 * 1000);
+    countdownInterval = setInterval(updateCountdown, 1000);
+    updateCountdown();
+  }
+
+  function toggleReminder() {
+    reminderOn = !reminderOn;
+    document.getElementById('sToggle').classList.toggle('off', !reminderOn);
+    if (reminderOn) {
+      scheduleReminder();
+      showToast('Erinnerungen aktiviert 🔔');
+    } else {
+      if (reminderTimer) clearTimeout(reminderTimer);
+      if (countdownInterval) clearInterval(countdownInterval);
+      reminderEndTime = null;
+      updateCountdown();
+      showToast('Erinnerungen pausiert');
+    }
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'verlauf') renderVerlauf('woche');
+    if (name === 'protokoll') updateEmptyLog();
+  }
+
+  function updateEmptyLog() {
+    document.getElementById('emptyLog').style.display = logEntries.length === 0 ? 'block' : 'none';
+  }
+
+  const DAYS_DE = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  const MONTHS_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const DEMO_ML = [2100,2600,1800,2500,2200,1600,2300,1950,2400,2150,2350,1750,2050,2500,1900,2600,2200,2400,1800,2700,2100,1950,2300,2450,1700,2550,2200,1850,2400,2300];
+
+  function buildPeriodData() {
+    const now = new Date();
+    const todayDow = now.getDay(); // 0=So,1=Mo,...
+    const todayMonth = now.getMonth(); // 0-11
+
+    // 7 Tage: last 6 days + today
+    const woche = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      woche.push({
+        lbl: i === 0 ? 'Heute' : DAYS_DE[d.getDay()],
+        ml: i === 0 ? 0 : DEMO_ML[i % DEMO_ML.length],
+        today: i === 0
+      });
+    }
+
+    // Letzter Monat: 4 Wochen als Ø ml/Tag
+    const monat = [
+      { lbl: 'Wo. 1', ml: 2050 },
+      { lbl: 'Wo. 2', ml: 2380 },
+      { lbl: 'Wo. 3', ml: 1920 },
+      { lbl: 'Wo. 4', ml: 2270 },
+    ];
+
+    // Letztes Jahr: Jan bis aktueller Monat, aktueller Monat = heute
+    const jahr = [];
+    for (let m = 0; m <= todayMonth; m++) {
+      jahr.push({
+        lbl: MONTHS_DE[m],
+        ml: m === todayMonth ? 0 : DEMO_ML[m % DEMO_ML.length],
+        today: m === todayMonth
+      });
+    }
+
+    return { woche, monat, jahr };
+  }
+
+  function renderVerlauf(period) {
+    const data = buildPeriodData()[period].map((d,i,arr) =>
+      i === arr.length-1 ? {...d, ml: total} : d
+    );
+    const max = Math.max(GOAL, ...data.map(d => d.ml));
+    const past = data.slice(0,-1);
+    const avg = past.length ? Math.round(past.reduce((s,d) => s+d.ml, 0) / past.length) : 0;
+
+    const wrap = document.getElementById('verlaufChart');
+    const days = document.getElementById('verlaufDays');
+    wrap.innerHTML = ''; days.innerHTML = '';
+
+    data.forEach(d => {
+      const pct = max > 0 ? (d.ml / max) * 100 : 0;
+      const barClass = d.today ? 'today' : d.ml >= GOAL ? 'reached' : 'past';
+      const mlLabel = d.ml > 0 ? (d.ml >= 1000 ? (d.ml/1000).toFixed(1).replace('.',',') + ' l' : d.ml + ' ml') : '—';
+      const col = document.createElement('div');
+      col.className = 'chart-col';
+      col.innerHTML = `<div class="chart-bar-wrap" style="position:relative;">
+        <div class="chart-tooltip">${mlLabel}</div>
+        <div class="chart-bar ${barClass}" style="height:${pct}%"></div>
+      </div>`;
+      wrap.appendChild(col);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'chart-day';
+      lbl.style.flex = '1'; lbl.style.textAlign = 'center';
+      lbl.style.fontWeight = d.today ? '700' : '400';
+      lbl.style.color = d.today ? '#38bdf8' : '#64748b';
+      lbl.textContent = d.today ? '●' : d.lbl;
+      days.appendChild(lbl);
+    });
+
+    document.getElementById('verlaufGoalLine').style.bottom = (GOAL/max*100) + '%';
+    const avgFmt = avg >= 1000 ? (avg/1000).toFixed(1).replace('.',',') + ' l' : avg + ' ml';
+    document.getElementById('verlaufAvg').textContent = avgFmt;
+    document.getElementById('avgVal').textContent = avgFmt;
+  }
+
+  let currentPeriod = 'woche';
+  function switchPeriod(period, btn) {
+    currentPeriod = period;
+    document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderVerlauf(period);
+  }
+
+  const historyData = [
+    { day: 'Mo', ml: 2100 },
+    { day: 'Di', ml: 2600 },
+    { day: 'Mi', ml: 1800 },
+    { day: 'Do', ml: 2500 },
+    { day: 'Fr', ml: 2200 },
+    { day: 'Sa', ml: 1600 },
+    { day: 'So', ml: 0, today: true },
+  ];
+
+  function showHistory() {
+    const data = historyData.map((d, i) =>
+      i === historyData.length - 1 ? { ...d, ml: total } : d
+    );
+    const max = Math.max(GOAL, ...data.map(d => d.ml));
+    const avg = Math.round(data.slice(0, -1).reduce((s, d) => s + d.ml, 0) / (data.length - 1));
+
+    const wrap = document.getElementById('chartWrap');
+    const days = document.getElementById('chartDays');
+    wrap.innerHTML = '';
+    days.innerHTML = '';
+
+    data.forEach(d => {
+      const pct = max > 0 ? (d.ml / max) * 100 : 0;
+      const col = document.createElement('div');
+      col.className = 'chart-col';
+      const barClass = d.today ? 'today' : d.ml >= GOAL ? 'reached' : 'past';
+      const mlLabel = d.ml > 0 ? (d.ml >= 1000 ? (d.ml/1000).toFixed(1).replace('.',',') + ' l' : d.ml + ' ml') : '—';
+      col.innerHTML = `
+        <div class="chart-bar-wrap" style="position:relative;">
+          <div class="chart-tooltip">${mlLabel}</div>
+          <div class="chart-bar ${barClass}" style="height:${pct}%"></div>
+        </div>`;
+      wrap.appendChild(col);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'chart-day';
+      lbl.style.flex = '1';
+      lbl.style.textAlign = 'center';
+      lbl.style.fontWeight = d.today ? '700' : '400';
+      lbl.style.color = d.today ? '#38bdf8' : '#64748b';
+      lbl.textContent = d.today ? 'Heute' : d.day;
+      days.appendChild(lbl);
+    });
+
+    // position goal line
+    const goalPct = GOAL / max;
+    const goalBottom = goalPct * 100;
+    document.getElementById('goalLine').style.bottom = goalBottom + '%';
+
+    document.getElementById('historyAvg').textContent = (avg / 1000).toFixed(1).replace('.', ',') + ' l';
+    document.getElementById('avgVal').textContent = (avg / 1000).toFixed(1).replace('.', ',') + ' l';
+    document.getElementById('historyOverlay').classList.add('show');
+  }
+
+  function closeHistory() {
+    document.getElementById('historyOverlay').classList.remove('show');
+  }
+
+  function openGoalEditor() {
+    document.getElementById('settingsDrop').classList.remove('open');
+    const ob = document.getElementById('onboarding');
+    ob.style.display = 'flex';
+    ob.classList.remove('hidden');
+  }
+
+  function updateCurrentGoalLabel() {
+    const el = document.getElementById('currentGoalLabel');
+    if (el) el.textContent = (GOAL / 1000).toFixed(1).replace('.', ',') + ' l';
+  }
+
+  function toggleSettings(e) {
+    e.stopPropagation();
+    document.getElementById('settingsDrop').classList.toggle('open');
+  }
+  document.addEventListener('click', () => {
+    document.getElementById('settingsDrop').classList.remove('open');
+  });
+
+  scheduleReminder();
+
+  function updateGreeting() {
+    const h = new Date().getHours();
+    const text = h >= 6 && h < 11 ? 'Guten Morgen,' : h >= 11 && h < 19 ? 'Guten Tag,' : 'Guten Abend,';
+    document.getElementById('greeting').textContent = text;
+  }
+  setInterval(updateGreeting, 60000);
+
+  if (localStorage.getItem('sh_goal')) {
+    updateGoalDisplay();
+    updateGreeting();
+    updateUI();
+    scheduleReminder();
+    updateCurrentGoalLabel();
+  }
+</script>
+</body>
+</html>
